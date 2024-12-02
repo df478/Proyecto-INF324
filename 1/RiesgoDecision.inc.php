@@ -13,68 +13,46 @@ $usuario = $_SESSION['usuario'];
 $rol = $_SESSION['rol']; // Obtener el rol del usuario desde la sesión
 $fechaInicio = date('Y-m-d');
 // Verificar que el rol tenga acceso a esta pantalla
-if ($rol !== 'Auditoría Interna') {
+if ($rol !== 'Gestión de Riesgos') {
     header('Location: index.php'); // Redirigir a dashboard si no tiene acceso
     exit;
 }
 
 include('conectar.inc.php'); // Conectar a la base de datos
 
-// Comprobar si el formulario para agregar un nuevo trámite ha sido enviado
-if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['descripcion_objetivo'])) {
-    $descripcion_objetivo = $_POST['descripcion_objetivo'];
+// Verificar si el tramite anterior tiene fecha de fin
+$verificar_fecha_fin = "SELECT fecha_fin FROM `seguimiento` 
+                        WHERE proceso LIKE 'Gestión de Riesgos' 
+                        ORDER BY nrotramite DESC LIMIT 1;";
+$stmt_verificar = $pdo->prepare($verificar_fecha_fin);
+$stmt_verificar->execute();
+$resultado = $stmt_verificar->fetch(PDO::FETCH_ASSOC);
 
-    // Insertar nuevo trámite en la tabla `seguimiento`
-    $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-    SELECT (flujo + 1), 'Establecer Objetivos del Desempeño', :usuario, :fecha_inicio, NULL
-    FROM `seguimiento` 
-    WHERE proceso LIKE 'Cierre de Auditoría'
-    ORDER BY nrotramite DESC
-    LIMIT 1;
-    ";
-    $stmt = $pdo->prepare($insertar_seguimiento);
-    $stmt->bindParam(':usuario', $usuario);
-    $stmt->bindParam(':fecha_inicio', $fechaInicio);
+if ($resultado && $resultado['fecha_fin'] !== null) {
     
-    if ($stmt->execute()) {
-        // Segunda consulta: Insertar un registro en la tabla `auditoriainterna`
-        $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones, SeguimientoRecomendaciones, CierreAuditoria, ResolucionObservacionesRecomendaciones) VALUES (LAST_INSERT_ID(), :descripcion_objetivo, null, null, null, null, null)";
-        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
-        $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
-        
-        // Ejecutar la segunda consulta
-        if ($stmt_objetivo->execute()) {
-            echo '<script type="text/javascript">
-                    alert("¡Éxito! El trámite y los objetivos se han registrado correctamente.");
-                  </script>';
-        } else {
-            echo '<script type="text/javascript">
-                    alert("¡Error! No se pudo registrar los objetivos.");
-                  </script>';
-        }
-    } else {
-        echo '<script type="text/javascript">
-                alert("¡Error! Hubo un problema al registrar el trámite. Intenta nuevamente.");
-              </script>';
-    }
+} else {
+    echo '<script type="text/javascript">
+            alert("¡Error! El trámite anterior no tiene fecha de fin. No se puede registrar un nuevo trámite.");
+          </script>';
 }
+
 
 // Comprobar si se ha enviado un formulario de eliminación
 if (isset($_POST['eliminar_objetivo'])) {
     $nrotramite = $_POST['nrotramite'];
 
-    // Eliminar registro de la tabla `auditoriainterna`
-    $eliminar_objetivo = "DELETE FROM datosauditoria.auditoriainterna WHERE nrotramite = :nrotramite";
+    // Eliminar registro de la tabla `gestionriesgos`
+    $eliminar_objetivo = "DELETE FROM datosauditoria.gestionriesgos WHERE nrotramite = :nrotramite";
     $stmt_eliminar = $pdo->prepare($eliminar_objetivo);
     $stmt_eliminar->bindParam(':nrotramite', $nrotramite);
 
     if ($stmt_eliminar->execute()) {
         echo '<script type="text/javascript">
-                alert("¡Éxito! El objetivo se ha eliminado correctamente.");
+                alert("¡Éxito! La desicion se ha eliminado correctamente.");
               </script>';
     } else {
         echo '<script type="text/javascript">
-                alert("¡Error! No se pudo eliminar el objetivo.");
+                alert("¡Error! No se pudo eliminar La desicion.");
               </script>';
     }
 }
@@ -84,25 +62,53 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
     $nrotramite = $_POST['nrotramite'];
     $descripcion_objetivo = $_POST['descripcion_objetivo'];
 
-    // Actualizar el objetivo en la tabla `auditoriainterna`
-    $actualizar_objetivo = "UPDATE datosauditoria.auditoriainterna SET EstablecerObjetivosDesempeno = :descripcion_objetivo WHERE nrotramite = :nrotramite";
+    // Validar y convertir el valor de $descripcion_objetivo a los valores adecuados para la base de datos
+    if ($descripcion_objetivo === 'No se evalúo') {
+        $descripcion_objetivo_db = null;  // Si es "No se evalúo", almacenamos NULL
+    } elseif ($descripcion_objetivo === 'NO') {
+        $descripcion_objetivo_db = 0;  // Si es "NO", almacenamos 0
+    } elseif ($descripcion_objetivo === 'SI') {
+        $descripcion_objetivo_db = 1;  // Si es "SI", almacenamos 1
+    } else {
+        // Si el valor no es válido, mostramos un mensaje de error
+        echo '<script type="text/javascript">
+                alert("¡Error! Valor de descripción no válido.");
+              </script>';
+        exit;
+    }
+
+    // Actualizar la decisión en la tabla `gestionriesgos`
+    $actualizar_objetivo = "UPDATE datosauditoria.gestionriesgos SET ExistenRiesgosSignificativos = :descripcion_objetivo WHERE nrotramite = :nrotramite";
     $stmt_actualizar = $pdo->prepare($actualizar_objetivo);
     $stmt_actualizar->bindParam(':nrotramite', $nrotramite);
-    $stmt_actualizar->bindParam(':descripcion_objetivo', $descripcion_objetivo);
+    $stmt_actualizar->bindParam(':descripcion_objetivo', $descripcion_objetivo_db);
 
     if ($stmt_actualizar->execute()) {
         echo '<script type="text/javascript">
-                alert("¡Éxito! El objetivo se ha actualizado correctamente.");
+                alert("¡Éxito! La decisión se ha actualizado correctamente.");
               </script>';
     } else {
         echo '<script type="text/javascript">
-                alert("¡Error! No se pudo actualizar el objetivo.");
+                alert("¡Error! No se pudo actualizar la decisión.");
               </script>';
     }
+
+    $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
+    SELECT (flujo + 1), '¿Existen Riesgos Significativos?', :usuario, :fecha_inicio, null
+    FROM `seguimiento` 
+    WHERE proceso LIKE 'Cierre de Auditoría'
+    ORDER BY nrotramite DESC
+    LIMIT 1;
+    ";
+    $stmt = $pdo->prepare($insertar_seguimiento);
+    $stmt->bindParam(':usuario', $usuario);
+    $stmt->bindParam(':fecha_inicio', $fechaInicio);
+    $stmt->execute();
 }
 
-// Obtener los registros de la tabla auditoriainterna
-$query = "SELECT * FROM datosauditoria.auditoriainterna";
+
+// Obtener los registros de la tabla gestionriesgos
+$query = "SELECT * FROM datosauditoria.gestionriesgos";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $registros = $stmt->fetchAll();
@@ -113,7 +119,7 @@ $registros = $stmt->fetchAll();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Objetivo - Auditoría Interna</title>
+    <title>¿Existen Riesgos Significativos?</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -124,23 +130,15 @@ $registros = $stmt->fetchAll();
     <div class="container-fluid mt-5">
         <div class="row">
             <div class="col-md-9 offset-md-3">
-                <h2>Objetivo - Auditoría Interna</h2>
+                <h2>¿Existen Riesgos Significativos?</h2>
                 <hr>
-                <h4 class="mt-4">Añadir nuevo trámite</h4>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="descripcion_objetivo" class="form-label">Descripción del Objetivo</label>
-                        <textarea class="form-control" id="descripcion_objetivo" name="descripcion_objetivo" rows="3" required></textarea>
-                    </div>
-                    <button type="submit" name="accion" value="anadir" class="btn btn-primary">Añadir Trámite</button>
-                </form>
 
-                <h4 class="mt-4">Objetivos de Auditoría Interna</h4>
+                <h4 class="mt-4">Evaluacion-Riesgos</h4>
                 <table class="table table-striped">
                     <thead>
                         <tr>
                             <th scope="col">Nro. Trámite</th>
-                            <th scope="col">Descripción del Objetivo</th>
+                            <th scope="col">¿Existen Riesgos Significativos?</th>
                             <th scope="col">Acciones</th>
                         </tr>
                     </thead>
@@ -151,7 +149,17 @@ $registros = $stmt->fetchAll();
                                 <td>
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="nrotramite" value="<?php echo $registro['nrotramite']; ?>">
-                                        <textarea class="form-control" name="descripcion_objetivo" rows="2"><?php echo $registro['EstablecerObjetivosDesempeno']; ?></textarea>
+
+                                        <?php
+                                        $descripcion = ($registro['ExistenRiesgosSignificativos'] === null) ? 'No se evalúo' : (($registro['ExistenRiesgosSignificativos'] === 0) ? 'NO' : 'SI');
+                                        ?>
+
+                                        <select class="form-control" name="descripcion_objetivo">
+                                            <option value="No se evalúo" <?php echo ($descripcion === 'No se evalúo') ? 'selected' : ''; ?>>No se evalúo</option>
+                                            <option value="NO" <?php echo ($descripcion === 'NO') ? 'selected' : ''; ?>>NO</option>
+                                            <option value="SI" <?php echo ($descripcion === 'SI') ? 'selected' : ''; ?>>SI</option>
+                                        </select>
+
                                         <button type="submit" name="accion" value="editar" class="btn btn-warning mt-2">Actualizar</button>
                                     </form>
                                 </td>

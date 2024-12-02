@@ -10,15 +10,14 @@
         $pantallas = [
             'Auditoría Interna' => [
                 'Objetivo',
+                'KPI',
                 'Informe',
                 'InformeDesicion',
                 'InformeAccion',
                 'Cierre',
-                'Observaciones',
-                'Retroalimentación'
+                'Observaciones'
             ],
             'Control Interno' => [
-                'KPI',
                 'Control',
                 'ControlDecision',
                 'ControlAccion'

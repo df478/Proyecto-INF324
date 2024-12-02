@@ -64,8 +64,7 @@ INSERT INTO `flujoauditoria` (`Flujo`, `Proceso`, `Siguiente`, `Tipo`, `Rol`, `P
 (1, 'Seguimiento de Recomendaciones', '¿Se Aceptan las Recomendaciones?', 'Proceso', 'Auditoría Interna', 'InformeAccion'),
 (1, 'Cierre de Auditoría', 'Fin', 'Proceso', 'Auditoría Interna', 'Cierre'),
 (1, 'Fin', '-', 'Proceso', 'Auditoría Interna', 'Logout'),
-(1, 'Cierre de Auditoría', 'Resolución de observaciones y recomendaciones', 'Proceso', 'Auditoría Interna', 'Observaciones'),
-(1, 'Resolución de observaciones y recomendaciones', 'Establecer Objetivos del Desempeño', 'Proceso', 'Auditoría Interna', 'Retroalimentación');
+(1, 'Cierre de Auditoría', 'Resolución de observaciones y recomendaciones', 'Proceso', 'Auditoría Interna', 'Observaciones');
 
 -- --------------------------------------------------------
 

@@ -20,44 +20,69 @@ if ($rol !== 'Auditoría Interna') {
 
 include('conectar.inc.php'); // Conectar a la base de datos
 
-// Comprobar si el formulario para agregar un nuevo trámite ha sido enviado
-if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['descripcion_objetivo'])) {
-    $descripcion_objetivo = $_POST['descripcion_objetivo'];
+// Verificar si el tramite anterior tiene fecha de fin
+$verificar_fecha_fin = "SELECT fecha_fin FROM `seguimiento` 
+                        WHERE proceso LIKE (select proceso from flujoauditoria where siguiente like 'Definir Objetivos de Auditoría(KPI)') 
+                        ORDER BY nrotramite DESC LIMIT 1;";
+$stmt_verificar = $pdo->prepare($verificar_fecha_fin);
+$stmt_verificar->execute();
+$resultado = $stmt_verificar->fetch(PDO::FETCH_ASSOC);
 
-    // Insertar nuevo trámite en la tabla `seguimiento`
-    $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-    SELECT (flujo + 1), 'Establecer Objetivos del Desempeño', :usuario, :fecha_inicio, NULL
-    FROM `seguimiento` 
-    WHERE proceso LIKE 'Cierre de Auditoría'
-    ORDER BY nrotramite DESC
-    LIMIT 1;
-    ";
-    $stmt = $pdo->prepare($insertar_seguimiento);
-    $stmt->bindParam(':usuario', $usuario);
-    $stmt->bindParam(':fecha_inicio', $fechaInicio);
-    
-    if ($stmt->execute()) {
-        // Segunda consulta: Insertar un registro en la tabla `auditoriainterna`
-        $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones, SeguimientoRecomendaciones, CierreAuditoria, ResolucionObservacionesRecomendaciones) VALUES (LAST_INSERT_ID(), :descripcion_objetivo, null, null, null, null, null)";
-        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
-        $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
+if ($resultado && $resultado['fecha_fin'] !== null) {
+    // Si existe fecha_fin, continuar con la inserción del nuevo trámite
+    if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['descripcion_objetivo'])) {
+        $descripcion_objetivo = $_POST['descripcion_objetivo'];
+
+        // Insertar nuevo trámite en la tabla `seguimiento`
+        $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
+        SELECT (flujo + 1), 'Definir Objetivos de Auditoría(KPI)', :usuario, :fecha_inicio, NULL
+        FROM `seguimiento` 
+        WHERE proceso LIKE 'Cierre de Auditoría'
+        ORDER BY nrotramite DESC
+        LIMIT 1;";
         
-        // Ejecutar la segunda consulta
-        if ($stmt_objetivo->execute()) {
-            echo '<script type="text/javascript">
-                    alert("¡Éxito! El trámite y los objetivos se han registrado correctamente.");
-                  </script>';
+        $stmt_insertar = $pdo->prepare($insertar_seguimiento);
+        $stmt_insertar->bindParam(':usuario', $usuario);
+        $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
+
+        if ($stmt_insertar->execute()) {
+            $sql = "SELECT * FROM datosauditoria.auditoriainterna order by nrotramite desc limit 1";
+            $stmt_valores = $pdo->prepare($sql);
+            $stmt_valores->execute();
+            $valores = $stmt_valores->fetch(PDO::FETCH_ASSOC);
+            $establecer_objetivos_desenpeno = $valores['EstablecerObjetivosDesempeno'];
+            // Segunda consulta: Insertar un registro en la tabla `auditoriainterna`
+            $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna 
+            (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones, SeguimientoRecomendaciones, CierreAuditoria, ResolucionObservacionesRecomendaciones) 
+            VALUES (LAST_INSERT_ID(), :establecer_objetivos_desenpeno, :descripcion_objetivo, null, null, null, null)";
+
+            // Preparar y ejecutar la consulta
+            $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+            $stmt_objetivo->bindParam(':establecer_objetivos_desenpeno', $establecer_objetivos_desenpeno);
+            $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
+
+            // Ejecutar la segunda consulta
+            if ($stmt_objetivo->execute()) {
+                echo '<script type="text/javascript">
+                        alert("¡Éxito! El trámite y los objetivos se han registrado correctamente.");
+                      </script>';
+            } else {
+                echo '<script type="text/javascript">
+                        alert("¡Error! No se pudo registrar los objetivos.");
+                      </script>';
+            }
         } else {
             echo '<script type="text/javascript">
-                    alert("¡Error! No se pudo registrar los objetivos.");
+                    alert("¡Error! Hubo un problema al registrar el trámite. Intenta nuevamente.");
                   </script>';
         }
-    } else {
-        echo '<script type="text/javascript">
-                alert("¡Error! Hubo un problema al registrar el trámite. Intenta nuevamente.");
-              </script>';
     }
+} else {
+    echo '<script type="text/javascript">
+            alert("¡Error! El trámite anterior no tiene fecha de fin. No se puede registrar un nuevo trámite.");
+          </script>';
 }
+
 
 // Comprobar si se ha enviado un formulario de eliminación
 if (isset($_POST['eliminar_objetivo'])) {
@@ -85,7 +110,7 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
     $descripcion_objetivo = $_POST['descripcion_objetivo'];
 
     // Actualizar el objetivo en la tabla `auditoriainterna`
-    $actualizar_objetivo = "UPDATE datosauditoria.auditoriainterna SET EstablecerObjetivosDesempeno = :descripcion_objetivo WHERE nrotramite = :nrotramite";
+    $actualizar_objetivo = "UPDATE datosauditoria.auditoriainterna SET DefinirObjetivosAuditoria = :descripcion_objetivo WHERE nrotramite = :nrotramite";
     $stmt_actualizar = $pdo->prepare($actualizar_objetivo);
     $stmt_actualizar->bindParam(':nrotramite', $nrotramite);
     $stmt_actualizar->bindParam(':descripcion_objetivo', $descripcion_objetivo);
@@ -102,7 +127,7 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
 }
 
 // Obtener los registros de la tabla auditoriainterna
-$query = "SELECT * FROM datosauditoria.auditoriainterna";
+$query = "SELECT * FROM datosauditoria.auditoriainterna where DefinirObjetivosAuditoria is not null";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $registros = $stmt->fetchAll();
@@ -124,23 +149,23 @@ $registros = $stmt->fetchAll();
     <div class="container-fluid mt-5">
         <div class="row">
             <div class="col-md-9 offset-md-3">
-                <h2>Objetivo - Auditoría Interna</h2>
+                <h2>Definir Objetivos de Auditoría(KPI) - Auditoría Interna</h2>
                 <hr>
                 <h4 class="mt-4">Añadir nuevo trámite</h4>
                 <form method="POST">
                     <div class="mb-3">
-                        <label for="descripcion_objetivo" class="form-label">Descripción del Objetivo</label>
+                        <label for="descripcion_objetivo" class="form-label">Descripción del Objetivo(KPI)</label>
                         <textarea class="form-control" id="descripcion_objetivo" name="descripcion_objetivo" rows="3" required></textarea>
                     </div>
                     <button type="submit" name="accion" value="anadir" class="btn btn-primary">Añadir Trámite</button>
                 </form>
 
-                <h4 class="mt-4">Objetivos de Auditoría Interna</h4>
+                <h4 class="mt-4">Objetivos(KPI) de Auditoría Interna</h4>
                 <table class="table table-striped">
                     <thead>
                         <tr>
                             <th scope="col">Nro. Trámite</th>
-                            <th scope="col">Descripción del Objetivo</th>
+                            <th scope="col">Descripción del Objetivo(KPI)</th>
                             <th scope="col">Acciones</th>
                         </tr>
                     </thead>
@@ -151,7 +176,7 @@ $registros = $stmt->fetchAll();
                                 <td>
                                     <form method="POST" style="display: inline;">
                                         <input type="hidden" name="nrotramite" value="<?php echo $registro['nrotramite']; ?>">
-                                        <textarea class="form-control" name="descripcion_objetivo" rows="2"><?php echo $registro['EstablecerObjetivosDesempeno']; ?></textarea>
+                                        <textarea class="form-control" name="descripcion_objetivo" rows="2"><?php echo $registro['DefinirObjetivosAuditoria']; ?></textarea>
                                         <button type="submit" name="accion" value="editar" class="btn btn-warning mt-2">Actualizar</button>
                                     </form>
                                 </td>
