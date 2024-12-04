@@ -30,7 +30,7 @@ function animar() {
     requestAnimationFrame(animar);
 
     // Rotar el triángulo
-    triángulo.rotation.x += 0.01;
+    //triángulo.rotation.x += 0.01;
     triángulo.rotation.y += 0.01;
 
     renderizador.render(escena, camara);
