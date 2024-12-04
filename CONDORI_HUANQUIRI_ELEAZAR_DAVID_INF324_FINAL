@@ -1,0 +1,25 @@
+NOMBRE: CONDORI HUANQUIRI ELEAZAR DAVID CI: 8304484
+MATERIA: INF 324 PROGRAMACION MULTIMEDIAL
+Examen Final
+1. Realice eun workflow con PHP, completando lo faltante acorde a la lista adjunta (diagrama, bd excel, flujo y seguimiento)
+18. Proceso de auditoría
+Seguimiento de auditorías internas y resolución de observaciones.
+https://github.com/df478/Proyecto-INF324/tree/main/1
+2. Realice el manejo de imagenes acorde a la lista adjunta.
+18.Extracción de formas geométricas
+Detectar y aislar objetos con formas regulares.
+https://github.com/df478/Proyecto-INF324/tree/main/2/proyecto324
+3.Realice el proyecto WebGL acorde a lista adjunta
+8. Animación de un triángulo
+Mover un triángulo en la pantalla usando una animación básica.
+https://github.com/df478/Proyecto-INF324/tree/main/3
+4.Realice un abc acorde a lista adjunta.
+18. Sistema de Gestión de Recaudación de Fondos
+Tablas Relacionadas:
+Donantes (id, nombre, correo, teléfono)
+Donaciones (id, donante_id, campaña_id, monto, fecha)
+Tablas Paramétricas:
+Campañas (id, nombre, meta_recaudación)
+MétodosPago (id, nombre)
+
+https://github.com/df478/Proyecto-INF324/tree/main/4
