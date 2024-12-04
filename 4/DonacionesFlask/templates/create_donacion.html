@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container mt-5">
+        <h1>Agregar Donación</h1>
+        <form action="{{ url_for('create_donacion') }}" method="POST">
+            <div class="mb-3">
+                <label for="donante_id" class="form-label">Donante</label>
+                <select id="donante_id" name="donante_id" class="form-select" required>
+                    <option value="">Selecciona un Donante</option>
+                    {% for donante in donantes %}
+                        <option value="{{ donante.id }}">{{ donante.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="campaña_id" class="form-label">Campaña</label>
+                <select id="campaña_id" name="campaña_id" class="form-select" required>
+                    <option value="">Selecciona una Campaña</option>
+                    {% for campaña in campañas %}
+                        <option value="{{ campaña.id }}">{{ campaña.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="método_pago_id" class="form-label">Método de Pago</label>
+                <select id="método_pago_id" name="método_pago_id" class="form-select" required>
+                    <option value="">Selecciona un Método de Pago</option>
+                    {% for método in metodospago %}
+                        <option value="{{ método.id }}">{{ método.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="monto" class="form-label">Monto</label>
+                <input type="number" step="0.01" id="monto" name="monto" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="fecha" class="form-label">Fecha</label>
+                <input type="date" id="fecha" name="fecha" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar Donación</button>
+        </form>
+    </div>
+    {% endblock %}

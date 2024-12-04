@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container mt-5">
+        <h1>Editar Donante</h1>
+        <form action="{{ url_for('edit_donante', id=donante.id) }}" method="POST">
+            <div class="mb-3">
+                <label for="nombre" class="form-label">Nombre</label>
+                <input type="text" id="nombre" name="nombre" class="form-control" value="{{ donante.nombre }}">
+            </div>
+            <div class="mb-3">
+                <label for="correo" class="form-label">Correo Electrónico</label>
+                <input type="email" id="correo" name="correo" class="form-control" value="{{ donante.correo }}">
+            </div>
+            <div class="mb-3">
+                <label for="telefono" class="form-label">Teléfono</label>
+                <input type="text" id="telefono" name="telefono" class="form-control" value="{{ donante.teléfono }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Actualizar Donante</button>
+        </form>
+    </div>
+    {% endblock %}
