@@ -1,7 +1,8 @@
 import os
-import cv2
 import numpy as np
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
 app = Flask(__name__)
 
@@ -47,67 +48,174 @@ def upload_image():
     return redirect('/')
 
 def process_image(filepath, filename):
-    # Leer la imagen
-    image = cv2.imread(filepath)
+    # Leer la imagen con matplotlib
+    image = mpimg.imread(filepath)  # Leer la imagen como matriz NumPy
 
-    # Convertir la imagen a escala de grises
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Convertir a escala de grises si es una imagen RGB
+    if image.ndim == 3:  # Si tiene 3 canales (RGB o RGBA)
+        grayscale_image = np.dot(image[:, :, :3], [0.2989, 0.5870, 0.1140])  # Conversión ponderada a escala de grises
+    else:
+        grayscale_image = image  # Ya está en escala de grises
 
-    # Aplicar un umbral para detectar bordes
-    _, threshold  = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    # Binarizar la imagen recorriendo los píxeles
+    threshold = 0.5 if grayscale_image.max() <= 1 else 128  # Ajustar umbral según el rango de valores
+    binary_image = (grayscale_image >= threshold).astype(int)
 
-    # Encontrar los contornos en la imagen umbralizada
-    contours, _ = cv2.findContours(threshold , cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    # Función para encontrar contornos
+    def find_contours(binary_image):
+        contours = []
+        visited = np.zeros_like(binary_image, dtype=bool)
 
-    i=0
+        def is_edge(x, y):
+            if binary_image[x, y] == 0:
+                return False
+            neighbors = [
+                (x-1, y), (x+1, y), (x, y-1), (x, y+1),
+                (x-1, y-1), (x-1, y+1), (x+1, y-1), (x+1, y+1)
+            ]
+            for nx, ny in neighbors:
+                if 0 <= nx < binary_image.shape[0] and 0 <= ny < binary_image.shape[1]:
+                    if binary_image[nx, ny] == 0:
+                        return True
+            return False
 
-    # Dibujar las formas geométricas encontradas
-    for contour in contours:
-        # here we are ignoring first counter because  
-        # findcontour function detects whole image as shape 
-        if i == 0: 
-            i = 1
-            continue
+        for x in range(binary_image.shape[0]):
+            for y in range(binary_image.shape[1]):
+                if binary_image[x, y] == 1 and not visited[x, y] and is_edge(x, y):
+                    contour = []
+                    stack = [(x, y)]
+                    while stack:
+                        cx, cy = stack.pop()
+                        if visited[cx, cy]:
+                            continue
+                        visited[cx, cy] = True
+                        contour.append((cx, cy))
+                        neighbors = [(cx-1, cy), (cx+1, cy), (cx, cy-1), (cx, cy+1)]
+                        for nx, ny in neighbors:
+                            if (0 <= nx < binary_image.shape[0] and 0 <= ny < binary_image.shape[1] and
+                                    binary_image[nx, ny] == 1 and not visited[nx, ny] and is_edge(nx, ny)):
+                                stack.append((nx, ny))
+                    contours.append(contour)
+        return contours
 
-        # cv2.approxPloyDP() function to approximate the shape 
-        approx = cv2.approxPolyDP( 
-        contour, 0.01 * cv2.arcLength(contour, True), True)
+    # Función para simplificar el contorno
+    def simplify_contour(contour, epsilon):
+        """
+        Simplifica un contorno eliminando puntos redundantes con base en la distancia mínima (`epsilon`).
+        """
+        simplified = [contour[0]]  # Comenzar con el primer punto
+        for i in range(1, len(contour)):
+            # Calcular distancia entre el último punto simplificado y el actual
+            distance = np.linalg.norm(np.array(contour[i]) - np.array(simplified[-1]))
+            if distance >= epsilon:  # Solo añadir si la distancia supera `epsilon`
+                simplified.append(contour[i])
+        # Asegurar que el contorno esté cerrado
+        if np.linalg.norm(np.array(simplified[0]) - np.array(simplified[-1])) >= epsilon:
+            simplified.append(simplified[0])
+        return simplified
 
-        # using drawContours() function 
-        cv2.drawContours(image, [contour], 0, (69, 182, 255), 5)
+    # Calcular el centro y verificar si es un círculo
+    def is_circle(contour, epsilon=3):
+        contour = np.array(contour)
+        centroid = np.mean(contour, axis=0)
 
-        # finding center point of shape 
-        M = cv2.moments(contour) 
-        if M['m00'] != 0.0: 
-            x = int(M['m10']/M['m00']) 
-            y = int(M['m01']/M['m00']) 
+        distances = np.linalg.norm(contour - centroid, axis=1)
+        mean_distance = np.mean(distances)
 
-        # putting shape name at center of each shape 
-        if len(approx) == 3: 
-            cv2.putText(image, 'Triangulo', (x, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
-    
-        elif len(approx) == 4: 
-            cv2.putText(image, 'Cuadrilatero', (x, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
-    
-        elif len(approx) == 5: 
-            cv2.putText(image, 'Pentagono', (x, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
-    
-        elif len(approx) == 6: 
-            cv2.putText(image, 'Hexagono', (x, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
-  
-        else: 
-            cv2.putText(image, 'Circulo', (x, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
+        # Comprobar si todas las distancias son aproximadamente iguales
+        if np.all(np.abs(distances - mean_distance) < epsilon):
+            return True, centroid
+        return False, centroid
 
-    # Guardar la imagen procesada
-    processed_image_path = os.path.join(PROCESSED_FOLDER, f"processed_{filename}")
-    cv2.imwrite(processed_image_path, image)
+    # Función para etiquetar formas según la longitud del contorno simplificado
+    def is_triangle(len_simplified):
+        if len_simplified == 3:
+            return True
+        else:
+            return False
 
-    return processed_image_path
+    # Función para calcular propiedades geométricas de un contorno
+    def contour_properties(contour):
+        """
+        Calcula área, perímetro y relación de distancias al centroide para un contorno.
+        """
+        contour = np.array(contour)
+        perimeter = np.sum([np.linalg.norm(contour[i] - contour[(i + 1) % len(contour)]) for i in range(len(contour))])
+        area = 0.5 * np.abs(np.dot(contour[:, 0], np.roll(contour[:, 1], 1)) - np.dot(contour[:, 1], np.roll(contour[:, 0], 1)))
+        centroid = np.mean(contour, axis=0)
+        distances = np.linalg.norm(contour - centroid, axis=1)
+        max_distance = np.max(distances)
+        min_distance = np.min(distances)
+        distance_ratio = max_distance / min_distance if min_distance != 0 else np.inf
+        return area, perimeter, distance_ratio
+
+    # Función para verificar si un contorno es un cuadrilátero
+    def is_quadrilateral(contour):
+        """
+        Clasifica un contorno como cuadrilátero basándose en propiedades geométricas.
+        """
+        # Calcular propiedades del contorno
+        contour = np.array(contour)
+        area, perimeter, distance_ratio = contour_properties(contour)
+
+        # Criterios para cuadriláteros
+        if 1.2 <= distance_ratio <= 2.5 and perimeter > 250:  # Ajustar según tamaño esperado
+            return True
+        return False
+
+    # Función para verificar si un contorno es un hexágono
+    def is_hexagon(contour):
+        """
+        Clasifica un contorno como hexágono basado en propiedades geométricas.
+        """
+        # Calcular propiedades del contorno
+        contour = np.array(contour)
+        area, perimeter, distance_ratio = contour_properties(contour)
+        # Criterios para hexágonos
+        if 1.2 <= distance_ratio <= 2.5 and 0.01 <= area / (perimeter ** 2) <= 0.05:  # Ajustar según tamaño esperado
+            return True
+        return False    
+
+    # Encontrar contornos
+    contours = find_contours(binary_image)
+
+    # Visualización de contornos originales y simplificados
+    plt.figure(figsize=(10, 10))
+    plt.imshow(image, cmap='gray')
+
+    for contour in contours[1:]:
+        original = np.array(contour)
+        simplified = np.array(simplify_contour(contour, epsilon=65))  # Ajustar epsilon según sea necesario
+
+        is_circle_flag, centroid = is_circle(contour)
+        is_triangle_flag = is_triangle(len(simplified))
+
+        if is_circle_flag:
+            label = "Círculo"
+        elif is_triangle_flag:
+            label = "Triángulo"
+        elif is_quadrilateral(original):  # Cuadrilátero
+            label = "Cuadrilátero"
+        elif is_hexagon(original):  # Hexágono
+            label = "Hexágono"
+        else:
+            label = "No Clasificado"
+
+        simplified_contour = np.array(contour)
+
+        # Dibujar contorno simplificado
+        plt.plot(simplified_contour[:, 1], simplified_contour[:, 0], 'o-', label=f"{label}")
+
+        # Etiquetar en la posición media del contorno
+        plt.text(centroid[1], centroid[0], label, color='black', fontsize=12, ha='center')
+
+    plt.legend()
+    plt.title("Contornos y Clasificación de Formas")
+    plt.savefig(os.path.join(PROCESSED_FOLDER, f"processed_{filename}"))
+    plt.close()
+
+    # Retornar la ruta de la imagen procesada
+    return os.path.join(PROCESSED_FOLDER, f"processed_{filename}")
 
 # Ruta para servir las imágenes subidas y procesadas
 @app.route('/uploads/<filename>')
