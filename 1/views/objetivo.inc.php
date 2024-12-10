@@ -14,7 +14,12 @@ $rol = $_SESSION['rol']; // Obtener el rol del usuario desde la sesión
 $fechaInicio = date('Y-m-d');
 // Verificar que el rol tenga acceso a esta pantalla
 if ($rol !== 'Auditoría Interna') {
-    header('Location: index.php'); // Redirigir a dashboard si no tiene acceso
+    // Mostrar un mensaje antes de redirigir
+    echo '<script type="text/javascript">';
+    echo 'alert("No tienes acceso a esta página. Serás redirigido.");';
+    echo 'window.location.href = "logout.php";';
+    echo '</script>';
+
     exit;
 }
 
@@ -25,10 +30,9 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['de
     $descripcion_objetivo = $_POST['descripcion_objetivo'];
 
     // Insertar nuevo trámite en la tabla `seguimiento`
-    $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-    SELECT (flujo + 1), 'Establecer Objetivos del Desempeño', :usuario, :fecha_inicio, NULL
-    FROM `seguimiento` 
-    WHERE proceso LIKE 'Cierre de Auditoría'
+    $insertar_seguimiento = "INSERT INTO seguimiento (nrotramite,flujo, proceso, usuario, fecha_inicio, fecha_fin)
+    SELECT (nrotramite+1),(select f.Flujo from flujoauditoria f where f.Proceso like 'Establecer Objetivos del Desempeño') , 'Establecer Objetivos del Desempeño', :usuario, :fecha_inicio, NULL
+    FROM `seguimiento` s
     ORDER BY nrotramite DESC
     LIMIT 1;
     ";
@@ -37,11 +41,31 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['de
     $stmt->bindParam(':fecha_inicio', $fechaInicio);
     
     if ($stmt->execute()) {
-        // Segunda consulta: Insertar un registro en la tabla `auditoriainterna`
-        $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones, SeguimientoRecomendaciones, CierreAuditoria, ResolucionObservacionesRecomendaciones) VALUES (LAST_INSERT_ID(), :descripcion_objetivo, null, null, null, null, null)";
+        // Segunda consulta: Insertar registros en la tabla `auditoriainterna`
+        $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones, SeguimientoRecomendaciones, CierreAuditoria, ResolucionObservacionesRecomendaciones) VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1), :descripcion_objetivo, null, null, null, null, null)";
         $stmt_objetivo = $pdo->prepare($insertar_objetivo);
         $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
-        
+        $stmt_objetivo->execute();
+
+        $insertar_objetivo = "INSERT INTO datosauditoria.controlinterno (nrotramite, EvaluacionControlInterno, HayDebilidadesControlInterno, RegistrarRecomendaciones) VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1), null, null, null)";
+        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+        $stmt_objetivo->execute();
+
+        $insertar_objetivo = "INSERT INTO datosauditoria.cumplimiento (nrotramite, CumplimientoDeNormas, CumpleConNormasYRegulaciones, AccionesCorrectivas) VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1), null, null, null)";
+        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+        $stmt_objetivo->execute();
+
+        $insertar_objetivo = "INSERT INTO datosauditoria.gestionriesgos (nrotramite, GestionDeRiesgos, ExistenRiesgosSignificativos	, AccionesMitigacionRiesgos) VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1), null, null, null)";
+        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+        $stmt_objetivo->execute();
+
+        $insertar_objetivo = "INSERT INTO datosauditoria.operaciones (nrotramite, EficienciaOperativa, EsEficienteLaOperacion	, PropuestasDeMejoraOperativa) VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1), null, null, null)";
+        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+        $stmt_objetivo->execute();
+
+        $insertar_objetivo = "INSERT INTO datosauditoria.planeacionestrategica (nrotramite, MedicionDelDesempeno, SeCumplenLosObjetivosDelDesempeno	, RecomendacionesParaMejorarDesempeno, ElaboracionDeInformes) VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1), null, null, null,null)";
+        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+
         // Ejecutar la segunda consulta
         if ($stmt_objetivo->execute()) {
             echo '<script type="text/javascript">

@@ -16,7 +16,12 @@ $fechaInicio = date('Y-m-d');
 if ($rol == 'Planeación Estratégica' ||  $rol == 'Auditoría Interna') {
     
 }else{
-    header('Location: index.php'); // Redirigir a dashboard si no tiene acceso
+    // Mostrar un mensaje antes de redirigir
+    echo '<script type="text/javascript">';
+    echo 'alert("No tienes acceso a esta página. Serás redirigido.");';
+    echo 'window.location.href = "logout.php";';
+    echo '</script>';
+
     exit;
 }
 
@@ -29,61 +34,6 @@ $stmt_verificar = $pdo->prepare($verificar_debilidad);
 $stmt_verificar->execute();
 $resultado = $stmt_verificar->fetch(PDO::FETCH_ASSOC);
 
-if ($resultado && $resultado['SeCumplenLosObjetivosDelDesempeno'] == 1) {
-    // Si existe fecha_fin, continuar con la inserción del nuevo trámite
-    if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['descripcion_objetivo'])) {
-        $descripcion_objetivo = $_POST['descripcion_objetivo'];
-
-        // Insertar nuevo trámite en la tabla `seguimiento`
-        $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-        SELECT (flujo + 1), 'Elaboración de Informes', :usuario, :fecha_inicio, NULL
-        FROM `seguimiento` 
-        WHERE proceso LIKE 'Cierre de Auditoría'
-        ORDER BY nrotramite DESC
-        LIMIT 1;";
-        
-        $stmt_insertar = $pdo->prepare($insertar_seguimiento);
-        $stmt_insertar->bindParam(':usuario', $usuario);
-        $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
-
-        if ($stmt_insertar->execute()) {
-            $sql = "SELECT * FROM datosauditoria.planeacionestrategica order by nrotramite desc limit 1";
-            $stmt_valores = $pdo->prepare($sql);
-            $stmt_valores->execute();
-            $valores = $stmt_valores->fetch(PDO::FETCH_ASSOC);
-            $establecer_objetivos_desenpeno = $valores['MedicionDelDesempeno'];
-            $RecomendacionesParaMejorarDesempeno= $valores['RecomendacionesParaMejorarDesempeno'];
-            // Segunda consulta: Insertar un registro en la tabla `planeacione,ElaboracionDeInformesstrategica`
-            $insertar_objetivo = "INSERT INTO datosauditoria.planeacionestrategica 
-            (nrotramite, MedicionDelDesempeno, SeCumplenLosObjetivosDelDesempeno, RecomendacionesParaMejorarDesempeno,ElaboracionDeInformes) 
-            VALUES (LAST_INSERT_ID(), :establecer_objetivos_desenpeno, 1,:RecomendacionesParaMejorarDesempeno,:descripcion_objetivo)";
-
-            // Preparar y ejecutar la consulta
-            $stmt_objetivo = $pdo->prepare($insertar_objetivo);
-            $stmt_objetivo->bindParam(':establecer_objetivos_desenpeno', $establecer_objetivos_desenpeno);
-            $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
-            $stmt_objetivo->bindParam(':RecomendacionesParaMejorarDesempeno', $RecomendacionesParaMejorarDesempeno);
-            // Ejecutar la segunda consulta
-            if ($stmt_objetivo->execute()) {
-                echo '<script type="text/javascript">
-                        alert("¡Éxito! El trámite y la descripción se han registrado correctamente.");
-                      </script>';
-            } else {
-                echo '<script type="text/javascript">
-                        alert("¡Error! No se pudo registrar la descripción.");
-                      </script>';
-            }
-        } else {
-            echo '<script type="text/javascript">
-                    alert("¡Error! Hubo un problema al registrar el trámite. Intenta nuevamente.");
-                  </script>';
-        }
-    }
-} else {
-    echo '<script type="text/javascript">
-            alert("¡Error! El trámite anterior tiene debilidades.");
-          </script>';
-}
 
 
 // Comprobar si se ha enviado un formulario de eliminación
@@ -111,6 +61,14 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
     $nrotramite = $_POST['nrotramite'];
     $descripcion_objetivo = $_POST['descripcion_objetivo'];
 
+    $insertar_seguimiento = "INSERT INTO seguimiento (nrotramite, flujo, proceso, usuario, fecha_inicio, fecha_fin) 
+    VALUES (:nrotramite_a_actualizar, 1, 'Elaboración de Informes', :usuario, :fecha_inicio, NULL);";
+    $stmt_insertar = $pdo->prepare($insertar_seguimiento);
+    $stmt_insertar->bindParam(':nrotramite_a_actualizar', $nrotramite);
+    $stmt_insertar->bindParam(':usuario', $usuario);
+    $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
+    $stmt_insertar->execute();
+
     // Actualizar La descripción en la tabla `planeacionestrategica`
     $actualizar_objetivo = "UPDATE datosauditoria.planeacionestrategica SET ElaboracionDeInformes = :descripcion_objetivo WHERE nrotramite = :nrotramite";
     $stmt_actualizar = $pdo->prepare($actualizar_objetivo);
@@ -129,7 +87,7 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
 }
 
 // Obtener los registros de la tabla planeacionestrategica
-$query = "SELECT * FROM datosauditoria.planeacionestrategica where ElaboracionDeInformes is not null";
+$query = "SELECT * FROM datosauditoria.planeacionestrategica";
 $stmt = $pdo->prepare($query);
 $stmt->execute();
 $registros = $stmt->fetchAll();
@@ -153,14 +111,6 @@ $registros = $stmt->fetchAll();
             <div class="col-md-9 offset-md-3">
                 <h2>Elaboración de Informes - Planeacion Estrategica</h2>
                 <hr>
-                <h4 class="mt-4">Añadir nuevo trámite</h4>
-                <form method="POST">
-                    <div class="mb-3">
-                        <label for="descripcion_objetivo" class="form-label">Descripción de la evaluación</label>
-                        <textarea class="form-control" id="descripcion_objetivo" name="descripcion_objetivo" rows="3" required></textarea>
-                    </div>
-                    <button type="submit" name="accion" value="anadir" class="btn btn-primary">Añadir Trámite</button>
-                </form>
 
                 <h4 class="mt-4">Evaluacion-Elaboración de Informes</h4>
                 <table class="table table-striped">

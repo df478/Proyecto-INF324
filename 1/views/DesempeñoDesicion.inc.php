@@ -14,7 +14,12 @@ $rol = $_SESSION['rol']; // Obtener el rol del usuario desde la sesión
 $fechaInicio = date('Y-m-d');
 // Verificar que el rol tenga acceso a esta pantalla
 if ($rol !== 'Planeación Estratégica') {
-    header('Location: index.php'); // Redirigir a dashboard si no tiene acceso
+    // Mostrar un mensaje antes de redirigir
+    echo '<script type="text/javascript">';
+    echo 'alert("No tienes acceso a esta página. Serás redirigido.");';
+    echo 'window.location.href = "logout.php";';
+    echo '</script>';
+
     exit;
 }
 
@@ -22,7 +27,7 @@ include('conectar.inc.php'); // Conectar a la base de datos
 
 // Verificar si el tramite anterior tiene fecha de fin
 $verificar_fecha_fin = "SELECT fecha_fin FROM `seguimiento` 
-                        WHERE proceso LIKE 'Elaboración de Informes' 
+                        WHERE proceso LIKE 'Medición del Desempeño' 
                         ORDER BY nrotramite DESC LIMIT 1;";
 $stmt_verificar = $pdo->prepare($verificar_fecha_fin);
 $stmt_verificar->execute();
@@ -92,18 +97,13 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
                 alert("¡Error! No se pudo actualizar la decisión.");
               </script>';
     }
-
-    $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-    SELECT (flujo + 1), '¿Se Cumplen los Objetivos del Desempeño?', :usuario, :fecha_inicio, null
-    FROM `seguimiento` 
-    WHERE proceso LIKE 'Cierre de Auditoría'
-    ORDER BY nrotramite DESC
-    LIMIT 1;
-    ";
-    $stmt = $pdo->prepare($insertar_seguimiento);
-    $stmt->bindParam(':usuario', $usuario);
-    $stmt->bindParam(':fecha_inicio', $fechaInicio);
-    $stmt->execute();
+    $insertar_seguimiento = "INSERT INTO seguimiento (nrotramite, flujo, proceso, usuario, fecha_inicio, fecha_fin) 
+    VALUES (:nrotramite_a_actualizar, 1, '¿Se Cumplen los Objetivos del Desempeño?', :usuario, :fecha_inicio, NULL);";
+    $stmt_insertar = $pdo->prepare($insertar_seguimiento);
+    $stmt_insertar->bindParam(':nrotramite_a_actualizar', $nrotramite);
+    $stmt_insertar->bindParam(':usuario', $usuario);
+    $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
+    $stmt_insertar->execute();
 }
 
 

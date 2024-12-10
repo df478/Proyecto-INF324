@@ -7,21 +7,43 @@
     width: 250px;
     background-color: #343a40;
     padding-top: 20px;
+    overflow-y: auto;  /* Permite el desplazamiento vertical */
 }
 
+/* Estilo para los enlaces del menú */
 .sidebar a {
     color: white;
     padding: 10px 15px;
     text-decoration: none;
     display: block;
+    transition: background-color 0.3s;  /* Efecto suave al pasar el ratón */
 }
 
+/* Estilo cuando el enlace es hover */
 .sidebar a:hover {
     background-color: #007bff;
 }
 
-/* Estilos para el contenido principal */
+/* Estilo para el contenido principal */
 .content {
-    margin-left: 250px;
+    margin-left: 250px;  /* Deja espacio para el sidebar */
     padding: 20px;
+}
+
+/* Si el menú tiene muchas opciones, agregamos un desplazamiento con estilo */
+.sidebar a {
+    font-size: 16px;  /* Para mejor legibilidad */
+}
+
+.sidebar a:first-child {
+    padding-top: 20px;  /* Espaciado superior para el primer item */
+}
+
+.sidebar a:last-child {
+    padding-bottom: 20px;  /* Espaciado inferior para el último item */
+}
+
+/* Hacemos que el menú tenga un máximo de altura y sea desplazable */
+.sidebar {
+    max-height: 100vh;  /* Ajusta la altura máxima del menú */
 }

@@ -14,74 +14,62 @@ $rol = $_SESSION['rol']; // Obtener el rol del usuario desde la sesión
 $fechaInicio = date('Y-m-d');
 // Verificar que el rol tenga acceso a esta pantalla
 if ($rol !== 'Auditoría Interna') {
-    header('Location: index.php'); // Redirigir a dashboard si no tiene acceso
+    // Mostrar un mensaje antes de redirigir
+    echo '<script type="text/javascript">';
+    echo 'alert("No tienes acceso a esta página. Serás redirigido.");';
+    echo 'window.location.href = "logout.php";';
+    echo '</script>';
+
     exit;
 }
 
 include('conectar.inc.php'); // Conectar a la base de datos
-
-// Verificar si existe una debilidad
-$verificar_debilidad = "SELECT SeAceptanRecomendaciones FROM datosauditoria.auditoriainterna 
-                        ORDER BY nrotramite DESC LIMIT 1;";
-$stmt_verificar = $pdo->prepare($verificar_debilidad);
-$stmt_verificar->execute();
-$resultado = $stmt_verificar->fetch(PDO::FETCH_ASSOC);
-
-if ($resultado && $resultado['SeAceptanRecomendaciones'] !== 1) {
     
-    if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['descripcion_objetivo'])) {
-        $descripcion_objetivo = $_POST['descripcion_objetivo'];
-
-        // Insertar nuevo trámite en la tabla `seguimiento`
-        $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-        SELECT (flujo + 1), 'Seguimiento de Recomendaciones', :usuario, :fecha_inicio, NULL
-        FROM `seguimiento` 
-        WHERE proceso LIKE 'Cierre de Auditoría'
-        ORDER BY nrotramite DESC
-        LIMIT 1;";
-        
-        $stmt_insertar = $pdo->prepare($insertar_seguimiento);
-        $stmt_insertar->bindParam(':usuario', $usuario);
-        $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
-
-        if ($stmt_insertar->execute()) {
-            $sql = "SELECT * FROM datosauditoria.auditoriainterna order by nrotramite desc limit 1";
-            $stmt_valores = $pdo->prepare($sql);
-            $stmt_valores->execute();
-            $valores = $stmt_valores->fetch(PDO::FETCH_ASSOC);
-            $establecer_objetivos_desenpeno = $valores['EstablecerObjetivosDesempeno'];
-            $DefinirObjetivosAuditoria = $valores['DefinirObjetivosAuditoria'];
-            // Segunda consulta: Insertar un registro en la tabla `planeacione,ElaboracionDeInformesstrategica`
-            $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna 
-            (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones,SeguimientoRecomendaciones,CierreAuditoria,ResolucionObservacionesRecomendaciones) 
-            VALUES (LAST_INSERT_ID(), :establecer_objetivos_desenpeno, :DefinirObjetivosAuditoria,0,:descripcion_objetivo,null,null)";
-
-            // Preparar y ejecutar la consulta
-            $stmt_objetivo = $pdo->prepare($insertar_objetivo);
-            $stmt_objetivo->bindParam(':establecer_objetivos_desenpeno', $establecer_objetivos_desenpeno);
-            $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
-            $stmt_objetivo->bindParam(':DefinirObjetivosAuditoria', $DefinirObjetivosAuditoria);
-
-            // Ejecutar la segunda consulta
-            if ($stmt_objetivo->execute()) {
-                echo '<script type="text/javascript">
-                        alert("¡Éxito! El trámite y la descripción se han registrado correctamente.");
-                      </script>';
-            } else {
-                echo '<script type="text/javascript">
-                        alert("¡Error! No se pudo registrar la descripción.");
-                      </script>';
-            }
+if (isset($_POST['accion']) && $_POST['accion'] === 'anadir' && isset($_POST['descripcion_objetivo'])) {
+    $descripcion_objetivo = $_POST['descripcion_objetivo'];
+    
+    // Insertar nuevo trámite en la tabla `seguimiento`
+    $insertar_seguimiento = "INSERT INTO seguimiento (nrotramite,flujo, proceso, usuario, fecha_inicio, fecha_fin)
+    SELECT (nrotramite+1),(select f.Flujo from flujoauditoria f where f.Proceso like 'Seguimiento de Recomendaciones') , 'Seguimiento de Recomendaciones', :usuario, :fecha_inicio, NULL
+    FROM `seguimiento` s
+    ORDER BY nrotramite DESC
+    LIMIT 1;
+    ";
+    
+    $stmt_insertar = $pdo->prepare($insertar_seguimiento);
+    $stmt_insertar->bindParam(':usuario', $usuario);
+    $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
+    if ($stmt_insertar->execute()) {
+        $sql = "SELECT * FROM datosauditoria.auditoriainterna order by nrotramite desc limit 1";
+        $stmt_valores = $pdo->prepare($sql);
+        $stmt_valores->execute();
+        $valores = $stmt_valores->fetch(PDO::FETCH_ASSOC);
+        $establecer_objetivos_desenpeno = $valores['EstablecerObjetivosDesempeno'];
+        $DefinirObjetivosAuditoria = $valores['DefinirObjetivosAuditoria'];
+        // Segunda consulta: Insertar un registro en la tabla `planeacione,ElaboracionDeInformesstrategica`
+        $insertar_objetivo = "INSERT INTO datosauditoria.auditoriainterna 
+        (nrotramite, EstablecerObjetivosDesempeno, DefinirObjetivosAuditoria, SeAceptanRecomendaciones,SeguimientoRecomendaciones,CierreAuditoria,ResolucionObservacionesRecomendaciones) 
+        VALUES ((SELECT (nrotramite) FROM `seguimiento` ORDER BY nrotramite DESC LIMIT 1),:establecer_objetivos_desenpeno, :DefinirObjetivosAuditoria,0,:descripcion_objetivo,null,null)";
+        // Preparar y ejecutar la consulta
+        $stmt_objetivo = $pdo->prepare($insertar_objetivo);
+        $stmt_objetivo->bindParam(':establecer_objetivos_desenpeno', $establecer_objetivos_desenpeno);
+        $stmt_objetivo->bindParam(':descripcion_objetivo', $descripcion_objetivo);
+        $stmt_objetivo->bindParam(':DefinirObjetivosAuditoria', $DefinirObjetivosAuditoria);
+        // Ejecutar la segunda consulta
+        if ($stmt_objetivo->execute()) {
+            echo '<script type="text/javascript">
+                    alert("¡Éxito! El trámite y la descripción se han registrado correctamente.");
+                  </script>';
         } else {
             echo '<script type="text/javascript">
-                    alert("¡Error! Hubo un problema al registrar el trámite. Intenta nuevamente.");
+                    alert("¡Error! No se pudo registrar la descripción.");
                   </script>';
         }
+    } else {
+        echo '<script type="text/javascript">
+                alert("¡Error! Hubo un problema al registrar el trámite. Intenta nuevamente.");
+              </script>';
     }
-} else {
-    echo '<script type="text/javascript">
-            alert("¡Error! El trámite anterior no tiene debilidades.");
-          </script>';
 }
 
 

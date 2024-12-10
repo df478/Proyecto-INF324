@@ -41,9 +41,8 @@ CREATE TABLE `flujoauditoria` (
 --
 
 INSERT INTO `flujoauditoria` (`Flujo`, `Proceso`, `Siguiente`, `Tipo`, `Rol`, `Pantalla`) VALUES
-(1, 'Inicio', 'Establecer Objetivos del Desempeño', 'Proceso', 'Auditoría Interna', 'Login'),
 (1, 'Establecer Objetivos del Desempeño', 'Definir Objetivos de Auditoría(KPI)', 'Proceso', 'Auditoría Interna', 'Objetivo'),
-(1, 'Definir Objetivos de Auditoría(KPI)', 'Evaluación del Control Interno', 'Proceso', 'Control Interno', 'KPI'),
+(1, 'Definir Objetivos de Auditoría(KPI)', 'Evaluación del Control Interno', 'Proceso', 'Auditoría Interna', 'KPI'),
 (1, 'Evaluación del Control Interno', '¿Hay Debilidades en el Control Interno?', 'Proceso', 'Control Interno', 'Control'),
 (1, '¿Hay Debilidades en el Control Interno?', 'Registrar Recomendaciones (Sí) / Gestión de Riesgos (No)', 'Condicional', 'Control Interno', 'ControlDecision'),
 (1, 'Registrar Recomendaciones', '¿Hay Debilidades en el Control Interno?', 'Proceso', 'Control Interno', 'ControlAccion'),
@@ -59,12 +58,10 @@ INSERT INTO `flujoauditoria` (`Flujo`, `Proceso`, `Siguiente`, `Tipo`, `Rol`, `P
 (1, 'Medición del Desempeño', '¿Se Cumplen los Objetivos del Desempeño?', 'Proceso', 'Planeación Estratégica', 'Desempeño'),
 (1, '¿Se Cumplen los Objetivos del Desempeño?', 'Recomendaciones de Mejora (No) / Elaboración de Informes (Sí)', 'Condicional', 'Planeación Estratégica', 'DesempeñoDesicion'),
 (1, 'Recomendaciones para Mejorar Desempeño', '¿Se Cumplen los Objetivos del Desempeño?', 'Proceso', 'Planeación Estratégica', 'DesempeñoAccion'),
-(1, 'Elaboración de Informes', '¿Se Aceptan las Recomendaciones?', 'Proceso', 'Planeación Estratégica', 'Informe'),
-(1, '¿Se Aceptan las Recomendaciones?', 'Seguimiento de Recomendaciones (No) / Cierre de Auditoría (Sí)', 'Condicional', 'Auditoría Interna', 'InformeDesicion'),
-(1, 'Seguimiento de Recomendaciones', '¿Se Aceptan las Recomendaciones?', 'Proceso', 'Auditoría Interna', 'InformeAccion'),
-(1, 'Cierre de Auditoría', 'Fin', 'Proceso', 'Auditoría Interna', 'Cierre'),
-(1, 'Fin', '-', 'Proceso', 'Auditoría Interna', 'Logout'),
-(1, 'Cierre de Auditoría', 'Resolución de observaciones y recomendaciones', 'Proceso', 'Auditoría Interna', 'Observaciones');
+(1, 'Elaboración de Informes', 'Fin', 'Proceso', 'Planeación Estratégica', 'Informe'),
+(2, 'Seguimiento de Recomendaciones', 'Resolución de observaciones y recomendaciones', 'Proceso', 'Auditoría Interna', 'InformeAccion'),
+(2, 'Resolución de observaciones y recomendaciones', 'Cierre de Auditoría', 'Proceso', 'Auditoría Interna', 'Observaciones'),
+(2, 'Cierre de Auditoría', 'Fin', 'Proceso', 'Auditoría Interna', 'Cierre');
 
 -- --------------------------------------------------------
 
@@ -73,43 +70,42 @@ INSERT INTO `flujoauditoria` (`Flujo`, `Proceso`, `Siguiente`, `Tipo`, `Rol`, `P
 --
 
 CREATE TABLE `seguimiento` (
-  `nrotramite` int(11) NOT NULL,
-  `flujo` int(11) DEFAULT NULL,
-  `proceso` varchar(255) DEFAULT NULL,
-  `usuario` varchar(255) DEFAULT NULL,
-  `fecha_inicio` date DEFAULT NULL,
-  `fecha_fin` date DEFAULT NULL
+  `id` INT(11) NOT NULL AUTO_INCREMENT,  -- Nueva columna ID
+  `nrotramite` INT(11) NOT NULL,
+  `flujo` INT(11) DEFAULT NULL,
+  `proceso` VARCHAR(255) DEFAULT NULL,
+  `usuario` VARCHAR(255) DEFAULT NULL,
+  `fecha_inicio` DATE DEFAULT NULL,
+  `fecha_fin` DATE DEFAULT NULL,
+  PRIMARY KEY (`id`)  -- Establecer la columna 'id' como clave primaria
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
 
---
 -- Volcado de datos para la tabla `seguimiento`
---
-
 INSERT INTO `seguimiento` (`nrotramite`, `flujo`, `proceso`, `usuario`, `fecha_inicio`, `fecha_fin`) VALUES
 (1001, 1, 'Establecer Objetivos del Desempeño', 'jmartinez', '2024-01-04', '2024-01-05'),
-(1002, 1, 'Definir Objetivos de Auditoría(KPI)', 'drobles', '2024-01-05', '2024-03-03'),
-(1003, 1, 'Evaluación del Control Interno', 'aperez', '2024-03-03', '2024-03-12'),
-(1004, 1, '¿Hay Debilidades en el Control Interno?', 'aperez', '2024-03-12', '2024-03-24'),
-(1005, 1, 'Registrar Recomendaciones', 'aperez', '2024-03-24', '2024-04-07'),
-(1006, 1, '¿Hay Debilidades en el Control Interno?', 'aperez', '2024-04-07', '2024-04-12'),
-(1007, 1, 'Gestión de Riesgos', 'mgracia', '2024-04-12', '2024-05-10'),
-(1008, 1, '¿Existen Riesgos Significativos?', 'mgracia', '2024-05-10', '2024-05-17'),
-(1009, 1, 'Acciones de Mitigación de Riesgos', 'mlopez', '2024-05-17', '2024-06-19'),
-(1010, 1, '¿Existen Riesgos Significativos?', 'mgracia', '2024-06-19', '2024-06-23'),
-(1011, 1, 'Cumplimiento de Normas', 'gfernandez', '2024-06-23', '2024-06-30'),
-(1012, 1, '¿Cumple con Normas y Regulaciones?', 'gfernandez', '2024-06-30', '2024-07-04'),
-(1013, 1, 'Acciones Correctivas', 'kquintero', '2024-07-04', '2024-08-08'),
-(1014, 1, '¿Cumple con Normas y Regulaciones?', 'gfernandez', '2024-08-08', '2024-09-13'),
-(1015, 1, 'Acciones Correctivas', 'kquintero', '2024-09-13', '2024-09-29'),
-(1016, 1, 'Eficiencia Operativa', 'csalinas', '2024-09-29', '2024-10-06'),
-(1017, 1, '¿Es Eficiente la Operación?', 'csalinas', '2024-10-06', '2024-10-18'),
-(1018, 1, 'Propuestas de Mejora Operativa', 'csalinas', '2024-10-18', '2024-11-02'),
-(1019, 1, 'Medición del Desempeño', 'lrodriguez', '2024-11-02', '2024-11-03'),
-(1020, 1, '¿Se Cumplen los Objetivos del Desempeño?', 'lrodriguez', '2024-11-03', '2024-11-09'),
-(1021, 1, 'Elaboración de Informes', 'vsoto', '2024-11-09', '2024-11-10'),
-(1022, 1, '¿Se Aceptan las Recomendaciones?', 'jmartinez', '2024-11-10', '2024-11-11'),
-(1023, 1, 'Cierre de Auditoría', 'jmartinez', '2024-11-11', '2024-11-12'),
-(1024, 1, 'Resolución de observaciones y recomendaciones', 'drobles', '2024-11-12', '2024-11-20');
+(1001, 1, 'Definir Objetivos de Auditoría(KPI)', 'drobles', '2024-01-05', '2024-03-03'),
+(1001, 1, 'Evaluación del Control Interno', 'aperez', '2024-03-03', '2024-03-12'),
+(1001, 1, '¿Hay Debilidades en el Control Interno?', 'aperez', '2024-03-12', '2024-03-24'),
+(1001, 1, 'Registrar Recomendaciones', 'aperez', '2024-03-24', '2024-04-07'),
+(1001, 1, '¿Hay Debilidades en el Control Interno?', 'aperez', '2024-04-07', '2024-04-12'),
+(1001, 1, 'Gestión de Riesgos', 'mgracia', '2024-04-12', '2024-05-10'),
+(1001, 1, '¿Existen Riesgos Significativos?', 'mgracia', '2024-05-10', '2024-05-17'),
+(1001, 1, 'Acciones de Mitigación de Riesgos', 'mlopez', '2024-05-17', '2024-06-19'),
+(1001, 1, '¿Existen Riesgos Significativos?', 'mgracia', '2024-06-19', '2024-06-23'),
+(1001, 1, 'Cumplimiento de Normas', 'gfernandez', '2024-06-23', '2024-06-30'),
+(1001, 1, '¿Cumple con Normas y Regulaciones?', 'gfernandez', '2024-06-30', '2024-07-04'),
+(1001, 1, 'Acciones Correctivas', 'kquintero', '2024-07-04', '2024-08-08'),
+(1001, 1, '¿Cumple con Normas y Regulaciones?', 'gfernandez', '2024-08-08', '2024-09-13'),
+(1001, 1, 'Acciones Correctivas', 'kquintero', '2024-09-13', '2024-09-29'),
+(1001, 1, 'Eficiencia Operativa', 'csalinas', '2024-09-29', '2024-10-06'),
+(1001, 1, '¿Es Eficiente la Operación?', 'csalinas', '2024-10-06', '2024-10-18'),
+(1001, 1, 'Propuestas de Mejora Operativa', 'csalinas', '2024-10-18', '2024-11-02'),
+(1001, 1, 'Medición del Desempeño', 'lrodriguez', '2024-11-02', '2024-11-03'),
+(1001, 1, '¿Se Cumplen los Objetivos del Desempeño?', 'lrodriguez', '2024-11-03', '2024-11-09'),
+(1001, 1, 'Elaboración de Informes', 'vsoto', '2024-11-09', '2024-11-10'),
+(1002, 2, 'Seguimiento de Recomendaciones', 'jmartinez', '2024-11-11', '2024-11-12'),
+(1002, 2, 'Resolución de observaciones y recomendaciones', 'jmartinez', '2024-11-12', '2024-11-20'),
+(1002, 2, 'Cierre de Auditoría', 'jmartinez', '2024-11-20', '2024-11-30');
 
 -- --------------------------------------------------------
 
@@ -143,12 +139,6 @@ INSERT INTO `usuarios` (`id_usuario`, `usuario`, `clave`, `rol`) VALUES
 --
 -- Índices para tablas volcadas
 --
-
---
--- Indices de la tabla `seguimiento`
---
-ALTER TABLE `seguimiento`
-  ADD PRIMARY KEY (`nrotramite`);
 
 --
 -- Indices de la tabla `usuarios`

@@ -13,10 +13,9 @@ include('conectar.inc.php');
 // Consultar los datos de la tabla seguimiento usando PDO
 try {
     $rol = $_SESSION['rol'];
-    $sql = "SELECT s.* FROM `seguimiento` s JOIN `flujoauditoria` f ON s.proceso = f.Proceso WHERE f.Rol LIKE :rol";
+    $sql = "SELECT * FROM `seguimiento`";
     
     $stmt = $pdo->prepare($sql);
-    $stmt->bindParam(':rol', $rol, PDO::PARAM_STR);
     $stmt->execute();
 } catch (PDOException $e) {
     die("Error al ejecutar la consulta: " . $e->getMessage());
@@ -24,13 +23,13 @@ try {
 
 // Manejar la eliminación de un registro
 if (isset($_POST['eliminar_tramite'])) {
-    $nrotramite = $_POST['nrotramite'];
+    $id = $_POST['id'];
 
     try {
         // Intentar eliminar el trámite
-        $eliminar_tramite = "DELETE FROM `seguimiento` WHERE nrotramite = :nrotramite";
+        $eliminar_tramite = "DELETE FROM `seguimiento` WHERE id = :id";
         $stmt_eliminar = $pdo->prepare($eliminar_tramite);
-        $stmt_eliminar->bindParam(':nrotramite', $nrotramite);
+        $stmt_eliminar->bindParam(':id', $id);
 
         // Ejecutar la eliminación
         if ($stmt_eliminar->execute()) {
@@ -50,22 +49,22 @@ if (isset($_POST['eliminar_tramite'])) {
 // Manejar la finalización de un trámite
 // Manejar la finalización de un trámite
 if (isset($_POST['finalizar_tramite'])) {
-    $nrotramite = $_POST['nrotramite'];
+    $id = $_POST['id'];
     $fecha_fin = date('Y-m-d'); // Obtener la fecha y hora actual
 
     // Verificar si el campo fecha_fin es NULL antes de proceder
-    $verificar_fecha_fin = "SELECT fecha_fin FROM `seguimiento` WHERE nrotramite = :nrotramite";
+    $verificar_fecha_fin = "SELECT fecha_fin FROM `seguimiento` WHERE id = :id";
     $stmt_verificar = $pdo->prepare($verificar_fecha_fin);
-    $stmt_verificar->bindParam(':nrotramite', $nrotramite);
+    $stmt_verificar->bindParam(':id', $id);
     $stmt_verificar->execute();
     $resultado = $stmt_verificar->fetch(PDO::FETCH_ASSOC);
 
     if ($resultado && $resultado['fecha_fin'] === null) {
         // Si fecha_fin es NULL, proceder con la actualización
-        $finalizar_tramite = "UPDATE `seguimiento` SET fecha_fin = :fecha_fin WHERE nrotramite = :nrotramite";
+        $finalizar_tramite = "UPDATE `seguimiento` SET fecha_fin = :fecha_fin WHERE id = :id";
         $stmt_finalizar = $pdo->prepare($finalizar_tramite);
         $stmt_finalizar->bindParam(':fecha_fin', $fecha_fin);
-        $stmt_finalizar->bindParam(':nrotramite', $nrotramite);
+        $stmt_finalizar->bindParam(':id', $id);
 
         if ($stmt_finalizar->execute()) {
             echo '<script>alert("¡Éxito! El trámite ha sido finalizado correctamente.");</script>';
@@ -126,11 +125,11 @@ if (isset($_POST['finalizar_tramite'])) {
                                 <td>" . $row["fecha_fin"] . "</td>
                                 <td>
                                     <form method='POST' style='display:inline;'>
-                                        <input type='hidden' name='nrotramite' value='" . $row["nrotramite"] . "'>
+                                        <input type='hidden' name='id' value='" . $row["id"] . "'>
                                         <button type='submit' name='eliminar_tramite' class='btn btn-danger btn-sm'>Eliminar</button>
                                     </form>
                                     <form method='POST' style='display:inline;'>
-                                        <input type='hidden' name='nrotramite' value='" . $row["nrotramite"] . "'>
+                                        <input type='hidden' name='id' value='" . $row["id"] . "'>
                                         <button type='submit' name='finalizar_tramite' class='btn btn-success btn-sm'>Finalizar</button>
                                     </form>
                                 </td>

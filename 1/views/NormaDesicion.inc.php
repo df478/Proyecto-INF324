@@ -14,7 +14,12 @@ $rol = $_SESSION['rol']; // Obtener el rol del usuario desde la sesión
 $fechaInicio = date('Y-m-d');
 // Verificar que el rol tenga acceso a esta pantalla
 if ($rol !== 'Cumplimiento') {
-    header('Location: index.php'); // Redirigir a dashboard si no tiene acceso
+    // Mostrar un mensaje antes de redirigir
+    echo '<script type="text/javascript">';
+    echo 'alert("No tienes acceso a esta página. Serás redirigido.");';
+    echo 'window.location.href = "logout.php";';
+    echo '</script>';
+
     exit;
 }
 
@@ -93,17 +98,13 @@ if (isset($_POST['accion']) && $_POST['accion'] === 'editar' && isset($_POST['de
               </script>';
     }
 
-    $insertar_seguimiento = "INSERT INTO seguimiento (flujo, proceso, usuario, fecha_inicio, fecha_fin)
-    SELECT (flujo + 1), '¿Cumple con Normas y Regulaciones?', :usuario, :fecha_inicio, null
-    FROM `seguimiento` 
-    WHERE proceso LIKE 'Cierre de Auditoría'
-    ORDER BY nrotramite DESC
-    LIMIT 1;
-    ";
-    $stmt = $pdo->prepare($insertar_seguimiento);
-    $stmt->bindParam(':usuario', $usuario);
-    $stmt->bindParam(':fecha_inicio', $fechaInicio);
-    $stmt->execute();
+    $insertar_seguimiento = "INSERT INTO seguimiento (nrotramite, flujo, proceso, usuario, fecha_inicio, fecha_fin) 
+    VALUES (:nrotramite_a_actualizar, 1, '¿Cumple con Normas y Regulaciones?', :usuario, :fecha_inicio, NULL);";
+    $stmt_insertar = $pdo->prepare($insertar_seguimiento);
+    $stmt_insertar->bindParam(':nrotramite_a_actualizar', $nrotramite);
+    $stmt_insertar->bindParam(':usuario', $usuario);
+    $stmt_insertar->bindParam(':fecha_inicio', $fechaInicio);
+    $stmt_insertar->execute();
 }
 
 

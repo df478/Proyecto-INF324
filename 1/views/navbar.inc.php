@@ -8,51 +8,35 @@
 
         // Definir las pantallas disponibles según el rol
         $pantallas = [
-            'Auditoría Interna' => [
                 'Objetivo',
                 'KPI',
-                'Informe',
-                'InformeDesicion',
-                'InformeAccion',
-                'Cierre',
-                'Observaciones'
-            ],
-            'Control Interno' => [
                 'Control',
                 'ControlDecision',
-                'ControlAccion'
-            ],
-            'Gestión de Riesgos' => [
+                'ControlAccion',
                 'Riesgo',
                 'RiesgoDecision',
-                'RiesgoAccion'
-            ],
-            'Cumplimiento' => [
+                'RiesgoAccion',
                 'Norma',
                 'NormaDesicion',
-                'NormaAccion'
-            ],
-            'Operaciones' => [
+                'NormaAccion',
                 'Eficiencia',
                 'EficienciaDecision',
-                'EficienciaAccion'
-            ],
-            'Planeación Estratégica' => [
+                'EficienciaAccion',
                 'Desempeño',
                 'DesempeñoDesicion',
                 'DesempeñoAccion',
-                'Informe'
-            ]
+                'Informe',
+                'InformeAccion',
+                'Observaciones',
+                'Cierre'
+                
         ];
 
-        // Filtrar las pantallas disponibles según el rol del usuario
-        $pantallasDisponibles = $pantallas[$rol] ?? [];
         ?>
         <a href="index.php" class="">Inicio</a>
-        <?php foreach ($pantallasDisponibles as $pantalla): ?>
+        <?php foreach ($pantallas as $pantalla): ?>
             <a href="<?php echo urlencode($pantalla); ?>.inc.php"><?php echo $pantalla; ?></a>
         <?php endforeach; ?>
-        
         <a href="logout.php">Cerrar sesión</a>
     <?php else: ?>
         <p>Por favor, inicie sesión para ver el menú.</p>
